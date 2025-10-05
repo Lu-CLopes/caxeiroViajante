@@ -33,7 +33,7 @@ inline void selection();
 inline void mutate();
 
 // how to cross the genes of the two parents to create a new child agent
-inline Point crossing(Point Mother, Point Father)
+inline ai_agent crossing(ai_agent Mother, ai_agent Father)
 {
     //  chosen method: Ordered Crossover
 
