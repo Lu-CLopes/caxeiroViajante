@@ -2,59 +2,7 @@
 #define _VISUAL_H_
 
 
-#include <cstdint>
-#include <cmath>
-
-
-// constants for Point flags
-const uint8_t POINT_EMPTY = 0x0;
-const uint8_t POINT_FULL = 0x1;
-
-
-class Point{
-public:
-    // attributes
-    double x;
-    double y;
-    uint8_t flags;
-
-    // constructors
-    Point(){
-        x = 0.0;
-        y = 0.0;
-        flags = POINT_EMPTY;
-    }
-
-    Point(double X, double Y){
-        x = X;
-        y = Y;
-        flags = POINT_EMPTY;
-    }
-
-    Point(double X, double Y, bool isFull){
-        x = X;
-        y = Y;
-        if(isFull)
-            flags = POINT_FULL;
-        else
-            flags = POINT_EMPTY;
-    }
-
-    // methods
-    // (euclidian) distante to other point
-    double d2op(Point other)
-    {
-        return std::hypot(x - other.x, y-other.y);
-    }
-
-    void fillStatus(bool isFull)
-    {
-        if(isFull)
-            flags = flags | POINT_FULL;
-        else
-            flags = flags & (~POINT_FULL);
-    }
-};
+#include "point.h"
 
 
 // SCREEN
@@ -96,7 +44,7 @@ inline int SDL_initialize(SDL_Window** window, SDL_Renderer** renderer)
 }
 
 
-inline void line(SDL_Renderer* renderer, Point FROM, Point TO)
+inline void line(SDL_Renderer* renderer, Point FROM, Point TO, bool hasArrowhead)
 {
     double dx = TO.x - FROM.x;
     double dy = TO.y - FROM.y;
@@ -108,34 +56,44 @@ inline void line(SDL_Renderer* renderer, Point FROM, Point TO)
     dx /= len;
     dy /= len;
 
-    // Arrow parameters
-    double arrowLength = 7.0;  // length of arrowhead
-    double arrowWidth  = 5.0;  // half width
-
     // main line endpoints
     Point perifONE( FROM.x + RADIUS * dx, FROM.y + RADIUS * dy);
     Point tip(TO.x - RADIUS * dx, TO.y - RADIUS * dy);    // tip == perifTWO
 
-    // arrowhead points
-    Point base(tip.x - arrowLength * dx, tip.y - arrowLength * dy);
-    Point left(base.x + arrowWidth * dy, base.y - arrowWidth * dx);
-    Point right(base.x - arrowWidth * dy, base.y + arrowWidth * dx);
+    if(hasArrowhead)
+    {
+        // Arrow parameters
+        double arrowLength = 7.0;  // length of arrowhead
+        double arrowWidth  = 5.0;  // half width
 
-    // Draw main line
-    SDL_RenderDrawLine(renderer,
-        centerX + perifONE.x, centerY - perifONE.y,
-        centerX + base.x, centerY - base.y);
+        // arrowhead points
+        Point base(tip.x - arrowLength * dx, tip.y - arrowLength * dy);
+        Point left(base.x + arrowWidth * dy, base.y - arrowWidth * dx);
+        Point right(base.x - arrowWidth * dy, base.y + arrowWidth * dx);
 
-    // drawing triangle arrowhead
-    SDL_RenderDrawLine(renderer,
-        centerX + tip.x, centerY - tip.y,
-        centerX + left.x, centerY - left.y);
-    SDL_RenderDrawLine(renderer,
-        centerX + tip.x, centerY - tip.y,
-        centerX + right.x, centerY - right.y);
-    SDL_RenderDrawLine(renderer,
-        centerX + left.x, centerY - left.y,
-        centerX + right.x, centerY - right.y);
+        // Draw main line
+        SDL_RenderDrawLine(renderer,
+            centerX + perifONE.x, centerY - perifONE.y,
+            centerX + base.x, centerY - base.y);
+
+        // drawing triangle arrowhead
+        SDL_RenderDrawLine(renderer,
+            centerX + tip.x, centerY - tip.y,
+            centerX + left.x, centerY - left.y);
+        SDL_RenderDrawLine(renderer,
+            centerX + tip.x, centerY - tip.y,
+            centerX + right.x, centerY - right.y);
+        SDL_RenderDrawLine(renderer,
+            centerX + left.x, centerY - left.y,
+            centerX + right.x, centerY - right.y);
+    }
+    else
+    {
+        // Draw main line
+        SDL_RenderDrawLine(renderer,
+            centerX + perifONE.x, centerY - perifONE.y,
+            centerX + tip.x, centerY - tip.y);
+    }
 }
 
 inline void showAxis(SDL_Renderer* renderer, bool showMarkers)

@@ -15,8 +15,8 @@ int main(int argc, char* argv[])
 
 
     // points initialiation logic
-    Point a(-100,150);
-    Point b(200, -250, true);
+    Point a(-100,150, true);
+    Point b(200, -250);
 
     
     while (!quit) {
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White
         drawCircle(renderer, a);
         drawCircle(renderer, b);
-        line(renderer, a, b);
+        line(renderer, a, b, true);
 
 
         // Update the screen
