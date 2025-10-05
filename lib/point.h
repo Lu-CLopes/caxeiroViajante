@@ -59,6 +59,12 @@ public:
     {
         return (flags & POINT_FULL);
     }
+
+    void setPosition(double X, double Y)
+    {
+        x = X;
+        y = Y;
+    }
 };
 
 #endif
