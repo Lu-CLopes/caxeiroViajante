@@ -6,8 +6,10 @@
 
 
 // CONSTANTS
-const uint8_t AMOUNT_POINTS = 8;    // 8 or more
-const uint8_t POPULATION = 0;       // amount of AI agents
+const uint8_t AMOUNT_POINTS = 8;                // 8 or more
+const int POPULATION = 200;                     // amount of AI agents
+const uint8_t STAGNATE_GENERATIONS_MAX = 20;    // amount of sequential stagnate generations to stop the training
+const uint8_t CHANCE_OF_MUTATION = 5;           // chance to mutate, in %
 
 
 // AI AGENT
@@ -27,7 +29,10 @@ public:
 inline void distributing();
 
 // how to choose the parents for the next generation
-inline void selection();
+inline void selection()
+{
+    // chosen method: Championship
+}
 
 // how to mutate the child if it hit the chance of mutating
 inline void mutate();
