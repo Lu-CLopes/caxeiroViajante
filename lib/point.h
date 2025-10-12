@@ -9,6 +9,7 @@
 // constants for Point flags
 const uint8_t POINT_EMPTY = 0x0;
 const uint8_t POINT_FULL = 0x1;
+const double PI = 3.14159265358979323846;
 
 
 class Point{
@@ -16,24 +17,35 @@ public:
     // attributes
     double x;
     double y;
+    char name;
     uint8_t flags;
 
     // constructors
     Point(){
         x = 0.0;
         y = 0.0;
+        name = 0;
         flags = POINT_EMPTY;
     }
 
     Point(double X, double Y){
         x = X;
         y = Y;
+        name = '0';
         flags = POINT_EMPTY;
     }
 
-    Point(double X, double Y, bool isFull){
+    Point(double X, double Y, char NAME){
         x = X;
         y = Y;
+        name = NAME;
+        flags = POINT_EMPTY;
+    }
+
+    Point(double X, double Y, char NAME, bool isFull){
+        x = X;
+        y = Y;
+        name = NAME;
         if(isFull)
             flags = POINT_FULL;
         else
@@ -64,6 +76,13 @@ public:
     {
         x = X;
         y = Y;
+    }
+
+    void setInfo(double X, double Y, char NAME)
+    {
+        x = X;
+        y = Y;
+        name = NAME;
     }
 };
 

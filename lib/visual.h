@@ -2,7 +2,7 @@
 #define _VISUAL_H_
 
 
-#include "point.h"
+#include "genetic.h"    // should I remove this?
 
 
 // SCREEN
@@ -11,7 +11,6 @@
 const double centerX = 500.0;
 const double centerY = 375.0;
 const int RADIUS = 7;
-const double PI = 3.14159265358979323846;
 
 
 inline int SDL_initialize(SDL_Window** window, SDL_Renderer** renderer)
@@ -184,6 +183,24 @@ inline void drawCircle(SDL_Renderer* renderer, Point target)
         fullCircle(renderer, target);
     else
         emptyCircle(renderer, target);
+}
+
+inline void drawPoints(SDL_Renderer* renderer, Point points[AMOUNT_POINTS], int n)
+{
+    int i;
+
+    for(i=0; i<AMOUNT_POINTS; i++)
+    {
+        if(i<n)
+        {
+            fullCircle(renderer, points[i]);
+            line(renderer, points[i], i==AMOUNT_POINTS-1? points[0] : points[i+1], true);
+        }
+        else
+            emptyCircle(renderer, points[i]);
+    }
+
+    return;
 }
 
 #endif

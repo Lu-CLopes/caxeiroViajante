@@ -15,14 +15,34 @@ int main(int argc, char* argv[])
 
 
     // points initialiation logic
-    Point a(-100,150, true);
-    Point b(200, -250);
+    Point points[AMOUNT_POINTS];
+    init_benchmark(points);
 
+    int position = 0;
     
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
                 quit = true;
+            }
+            else if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_DOWN:
+                        break;
+
+                    case SDLK_UP:
+                        break;
+
+                    case SDLK_RIGHT:
+                        if(position < AMOUNT_POINTS)
+                            position++;
+                        break;
+                        
+                    case SDLK_LEFT:
+                        if(position >= 0)
+                            position--;
+                        break;
+                }
             }
         }
 
@@ -38,9 +58,7 @@ int main(int argc, char* argv[])
 
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White
-        drawCircle(renderer, a);
-        drawCircle(renderer, b);
-        line(renderer, a, b, true);
+        drawPoints(renderer, points, position);
 
 
         // Update the screen
