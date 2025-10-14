@@ -29,32 +29,46 @@ public:
 inline void distributing();
 
 // how to choose the parents for the next generation
-inline ai_agent selection(vector<ai_agent> &population)
+inline vector<ai_agent> selection(vector<ai_agent> &population)
 {
     // chosen method: Championship
-    ai_agent best;
-    double bestFitness = 1e9; // algo bem grande
+    vector<ai_agent> winners; // vector of winners of each championship
+    double totalFitness = 0.0;
 
-    for (int i = 0; i < CHAMPIONSHIP_SIZE; i++)
+    // calculate the max fitness of the population
+    for (int i = 0; i < (int)population.size(); i++)
     {
-        int idx = rand() % population.size(); // escolhe indivíduo aleatório
-        double fit = evaluation(population[idx].genes);
-
-        if (fit < bestFitness)
-        {
-            bestFitness = fit;
-            best = population[idx];
-        }
+        totalFitness += evaluation(population[i].genes);
     }
 
-    return best; // returns the best of championship
+    // for the total population, do a championship of CHAMPIONSHIP_SIZE individuals
+    for (int i = 0; i < (int)population.size(); i += CHAMPIONSHIP_SIZE)
+    {
+        ai_agent champ_winner;
+        double bestFitness = totalFitness; // setting each championship
+
+        for (int j = 0; j < CHAMPIONSHIP_SIZE && (i + j) < (int)population.size(); j++)
+        {
+            int idx = i + j;
+            double fit = evaluation(population[idx].genes);
+
+            if (fit < bestFitness)
+            {
+                bestFitness = fit;
+                champ_winner = population[idx];
+            }
+        }
+        winners.push_back(champ_winner);
+    }
+
+    return winners;
 }
 
 // how to mutate the child if it hit the chance of mutating
 inline void mutate(ai_agent &agent)
 {
     // chosen method: Swap Mutation
-    int chance = rand() % 100; // random number from 0 to 99
+    int chance = rand() % 100; // random number from 0 to 99 for porcentage
 
     if (chance < CHANCE_OF_MUTATION)
     {
