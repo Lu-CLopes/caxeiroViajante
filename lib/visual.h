@@ -2,14 +2,14 @@
 #define _VISUAL_H_
 
 
-#include "genetic.h"    // should I remove this?
+#include "genetic.h"
 
 
 // SCREEN
 #include <iostream>
 #include <SDL.h>
 const double centerX = 500.0;
-const double centerY = 375.0;
+const double centerY = 350.0;
 const int RADIUS = 7;
 
 
@@ -23,7 +23,7 @@ inline int SDL_initialize(SDL_Window** window, SDL_Renderer** renderer)
     (*window) = SDL_CreateWindow("Screen Test",
                                      SDL_WINDOWPOS_UNDEFINED,
                                      SDL_WINDOWPOS_UNDEFINED,
-                                     1000, 750,
+                                     1000, 700,
                                      SDL_WINDOW_SHOWN);
     if (!window) {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
@@ -175,14 +175,6 @@ inline void fullCircle(SDL_Renderer* renderer, Point target)
             }
         }
     }
-}
-
-inline void drawCircle(SDL_Renderer* renderer, Point target)
-{
-    if(target.flags & POINT_FULL)
-        fullCircle(renderer, target);
-    else
-        emptyCircle(renderer, target);
 }
 
 inline void drawPoints(SDL_Renderer* renderer, Point points[AMOUNT_POINTS], int n)

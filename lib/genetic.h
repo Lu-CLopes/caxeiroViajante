@@ -3,13 +3,17 @@
 
 
 #include "point.h"
+#include <cfloat>
 
 
 // CONSTANTS
-const uint8_t AMOUNT_POINTS = 8;                // 8 or more
-const int POPULATION = 200;                     // amount of AI agents
-const uint8_t STAGNATE_GENERATIONS_MAX = 20;    // amount of sequential stagnate generations to stop the training
-const uint8_t CHANCE_OF_MUTATION = 5;           // chance to mutate, in %
+const int AMOUNT_POINTS = 20;                            // 8 or more
+const int POPULATION = 48;                                  // amount of AI agents
+const int GENERATIONS_MAX = 100000;                          // max amount of generations
+//const int STAGNATE_GENERATIONS_MAX = GENERATIONS_MAX/10;     // amount of sequential stagnate generations to stop the training
+const uint8_t CHANCE_OF_MUTATION = 30;                      // chance to mutate, in %
+const uint8_t CHAMPIONSHIP_SIZE = 3;                        // amount of participants in each championship
+//const int PARENTS_POPULATION = POPULATION/CHAMPIONSHIP_SIZE;
 
 
 // AI AGENT
@@ -19,24 +23,98 @@ public:
     Point genes[AMOUNT_POINTS];
 
     // CONSTRUCTORS
+    ai_agent(){}
+
+    ai_agent(Point points[AMOUNT_POINTS]){
+        int i;
+
+        for(i=0; i<AMOUNT_POINTS; i++)
+            genes[i] = points[i];
+    }
 
     // METHODS
+    void setGenes(Point points[AMOUNT_POINTS])
+    {
+        int i;
+
+        for(i=0; i<AMOUNT_POINTS; i++)
+            genes[i] = points[i];
+    }
 };
 
 
 // FUNCTIONS
-// distributing the points in the cartesian plane
-inline void distributing();
+
+// evaluating the path, returns the sum of euclidean distances
+inline double evaluation(Point genes[AMOUNT_POINTS])
+{
+    double sum = 0;
+    int i;
+
+    for(i=0; i<AMOUNT_POINTS-1;i++)
+        sum += genes[i].d2op(genes[i+1]);
+
+    return sum;
+}
 
 // how to choose the parents for the next generation
-inline void selection()
+inline void selection(ai_agent population[], ai_agent winners[], int pop)
 {
     // chosen method: Championship
+
+    // for the total population, do a championship of CHAMPIONSHIP_SIZE individuals
+    for (int i = 0; i < pop; i += CHAMPIONSHIP_SIZE)
+    {
+        ai_agent champ_winner;
+        double bestFitness = DBL_MAX;  // initially "infinite", max value of double
+
+        for (int j = 0; j < CHAMPIONSHIP_SIZE /*&& (i + j) < POPULATION*/; j++) // we don't need the commented part if we
+        {                                                                       // guarantee the pop. is divisible by champ_size
+            int idx = i + j;
+            double fit = evaluation(population[idx].genes);
+
+            if (fit < bestFitness)
+            {
+                bestFitness = fit;
+                champ_winner = population[idx];
+            }
+        }
+        winners[i/CHAMPIONSHIP_SIZE] = champ_winner;
+    }
 }
 
 // how to mutate the child if it hit the chance of mutating
-inline void mutate(Point genes[])
-{}
+inline void mutate(ai_agent *agent)
+{
+    // chosen method: Swap Mutation
+    int i, j, k;
+    Point possibility1[AMOUNT_POINTS];
+    Point possibility2[AMOUNT_POINTS];
+    
+    for(i=0; i<AMOUNT_POINTS; i++)
+    {
+        possibility1[i] = agent->genes[i];
+        possibility2[i] = agent->genes[i];
+    }
+
+    // choose index from 0 to 7 randomly and swap with the next index
+    i = rand() % AMOUNT_POINTS;
+
+    // circular motion to get next index
+    j = (i + 1) % AMOUNT_POINTS;
+
+    // circular motion to get next next index
+    k = (i + 2) % AMOUNT_POINTS;
+
+    // swap adjacent points
+    std::swap(possibility1[i], possibility1[j]);
+    std::swap(possibility2[i], possibility2[k]);
+
+    if(evaluation(possibility1) < evaluation(possibility2))
+        std::swap(agent->genes[i], agent->genes[j]);
+    else
+        std::swap(agent->genes[i], agent->genes[k]);
+}
 
 // checks arr[start] up to arr[end] for target
 inline bool arrayContains(Point arr[], char target, int start, int end)
@@ -52,53 +130,110 @@ inline bool arrayContains(Point arr[], char target, int start, int end)
 }
 
 // how to cross the genes of the two parents to create a new child agent
-inline ai_agent crossing(ai_agent Mother, ai_agent Father)
+inline ai_agent crossing(ai_agent Mother, ai_agent Father, uint8_t mut)
 {
     //  chosen method: Ordered Crossover
-    int m, f, up = 0;   // mother, father and used_points counter
+    int m, f;   // mother, father and used_points counter
     ai_agent child;
-    char used_points[AMOUNT_POINTS/2];
 
     // first half of mother is used
     for(m=0; m<AMOUNT_POINTS/2; m++)
-    {
         child.genes[m] = Mother.genes[m];
-        used_points[up++] = Mother.genes[m].name;
-    }
+
+    // now trash can't corrupt results
+    for(m=4; m<AMOUNT_POINTS; m++)
+        child.genes[m].name = 0;
+
+    m=4;
 
     // the other elements are taken from the father in the order they show up
     for(f=0; f<AMOUNT_POINTS || m<AMOUNT_POINTS; f++)
     {
         Point temp = Father.genes[f];
 
-        if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2))
-        {
-            child.genes[m++] = Father.genes[f];
-            used_points[up++] = Father.genes[f].name;
-        }
+        if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2-1))
+            child.genes[m++] = temp;
     }
 
     // possibility of mutation
-    // if it mutates, call the function
-    uint8_t chance; // random number from 0-99
-
-    if(chance < CHANCE_OF_MUTATION)
-        mutate(child.genes);
+    int chance = rand()%100;
+    if(chance < mut)
+        mutate(&child);
 
     // return the resulting point
     return child;
 }
 
-// evaluating the path, returns the sum of euclidean distances
-inline double evaluation(Point genes[AMOUNT_POINTS])
+inline void shuffle(Point points[AMOUNT_POINTS])
 {
-    double sum = 0;
     int i;
 
-    for(i=0; i<AMOUNT_POINTS-1;i++)
-        sum += genes[i].d2op(genes[i+1]);
+    for(i=0; i<AMOUNT_POINTS; i++)
+    {
+        int temp = rand() % AMOUNT_POINTS;
 
-    return sum;
+        if(temp != i)
+            std::swap(points[i], points[temp]);
+    }
+}
+
+// selects the best agent on the 
+inline ai_agent bestAgent(ai_agent agents[], double *eval, int pop)
+{
+    int i;
+    double comp = DBL_MAX;
+    double temp;
+    int id = 0;
+
+    for(i=0; i<pop; i++)
+    {
+        temp = evaluation(agents[i].genes);
+        if(temp < comp)
+        {
+            comp = temp;
+            id = i;
+            if(eval != NULL)
+                *eval = temp;
+        }
+    }
+
+    return agents[id];
+}
+
+inline void copyGen(ai_agent dst[], ai_agent src[], int pop)
+{
+    int i;
+
+    for(i=0; i<pop; i++)
+        dst[i] = src[i];
+}
+
+inline bool compGens(ai_agent curr[], ai_agent last[], int pop)
+{
+    int i, j;
+
+    for(i=0; i<pop; i++)
+        for(j=0; j<AMOUNT_POINTS; j++)
+            if(!curr[i].genes[j].isEqualTo(last[i].genes[j]))
+                return false;
+
+    return true;
+}
+
+inline void proliferation(ai_agent population[], ai_agent parents[], int pop, uint8_t mut)
+{
+    int i, j;
+
+    for(i=0; i<pop/CHAMPIONSHIP_SIZE; i+=2)
+    {
+        for(j=0; j<2*CHAMPIONSHIP_SIZE; j+=2)
+        {
+            population[3*i+j] =     crossing(parents[j], parents[j+1], mut);
+            population[3*i+j+1] =   crossing(parents[j+1], parents[j], mut);
+        }
+    }
+
+    return;
 }
 
 // environment functions
@@ -106,7 +241,7 @@ inline double evaluation(Point genes[AMOUNT_POINTS])
 inline void init_benchmark(Point points[])
 {
     int i;
-    const int RADIUS = 100;
+    const int RADIUS = 300;
     double angle = 0.0;
     const double angular_distance = (2*PI)/AMOUNT_POINTS;
     char name = 'A';
@@ -118,6 +253,90 @@ inline void init_benchmark(Point points[])
         angle += angular_distance;
         name++;
     }
+
+    return;
+}
+
+// create random environment
+inline void init_random(Point points[])
+{
+    int i;
+    char name = 'A';
+
+    for(i=0; i<AMOUNT_POINTS; i++)
+        points[i].setInfo(rand()%901 - 450, rand()%601 - 300, name++);
+
+    return;
+}
+
+// TRAINING FUNCTION
+inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[500][AMOUNT_POINTS], int *gens, int pop, int gnrt, uint8_t mut)
+{
+    int i, stagCount = 0, savedCount = 0;
+    bool notStagnate = true;
+    ai_agent lastGen[pop];
+    ai_agent currGen[pop];
+    ai_agent currParents[pop/CHAMPIONSHIP_SIZE];
+    double evalL = 0.0, evalC = 1.0;
+
+    // initial config
+    for(i=0; i<pop; i++)
+    {
+        agents[i].setGenes(points);
+        shuffle(agents[i].genes);
+    }
+    copyGen(currGen, agents, pop);
+
+
+    // main loop
+    for(i=0; i<gnrt && notStagnate; i++)
+    {
+        selection(currGen, currParents, pop);
+
+        copyGen(lastGen, currGen, pop);
+
+        proliferation(currGen, currParents, pop, mut);
+
+        // check if stagnate
+        ai_agent trash = bestAgent(lastGen, &evalL, pop);
+        trash = bestAgent(currGen, &evalC, pop);
+
+        if(evalL == evalC)
+        {
+            if(++stagCount >= gnrt/10)
+                notStagnate = false;
+        }
+        else
+            stagCount = 0;
+
+        // shuffling the agents helps the genetic variablility by making agents compete with non-brothers
+        // does it help? not shuffling allows for multiple strategies to develop at the same time
+        int shuffle_index;
+
+        for(shuffle_index=0; shuffle_index<pop; shuffle_index++)
+        {
+            int temp = rand() % pop;
+
+            if(temp != shuffle_index)
+                std::swap(currGen[shuffle_index], currGen[temp]);
+        }
+
+        // only saves 500 gens
+        if(i%(gnrt/500) == 0)
+        {
+
+            ai_agent best = bestAgent(currGen, NULL, pop);
+            int j;
+
+            for(j=0; j<AMOUNT_POINTS; j++)
+                saved[savedCount][j] = best.genes[j];
+
+            savedCount++;
+        }
+    }
+
+    // because of the i++ at the end of the loop, I don't need to add 1 to this variable
+    *gens = i;
 
     return;
 }
