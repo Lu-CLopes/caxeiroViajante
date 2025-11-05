@@ -1,14 +1,23 @@
 #include "../lib/visual.h"
+#include <fstream>      // for writing on a file for python graphs
+#include <cstdlib>      // for running the python graph
+#include <pthread.h>    // the python graph has an interruption, so I need a thread
+#include <time.h>
+
+
+void saveInfo(Point [500][AMOUNT_POINTS], char, int);
+void* show_graph(void*);
 
 
 int main(int argc, char* argv[])
 {
-    std::cout << "\nFormat: bspgm (benchmark, seed, population, generations and mutation)\nEx1.: 10010 runs benchmark and changes the number of generations\n" << std::endl;
+    std::cout << "\nFormat: bspgm (benchmark, seed, population, generations and mutation)\nEx1.: 10010 runs benchmark and changes the number of generations" << std::endl;
     bool showBenchmark = false;
     int pop = POPULATION;
     int gnrt = GENERATIONS_MAX;
     uint8_t mut = CHANCE_OF_MUTATION;
     int currMod = 2;
+    time_t seed = time(NULL);
 
     if(argc > 1)
     {
@@ -22,9 +31,11 @@ int main(int argc, char* argv[])
         if(argv[1][1] == '1' && argc >= currMod+1)
         {
             srand(atoi(argv[currMod++]));
+            std::cout << "curr seed: " << atoi(argv[currMod-1]) << std::endl << std::endl;
         }
         else {
-            srand(time(NULL));
+            srand(seed);
+            std::cout << "curr seed: " << seed << std::endl << std::endl;
         }
 
         // Population
@@ -41,7 +52,13 @@ int main(int argc, char* argv[])
         // generations
         if(argv[1][3] == '1' && argc >= currMod+1)
         {
-            gnrt = atoi(argv[currMod++]);
+            if(atoi(argv[currMod]) >= 500)
+                gnrt = atoi(argv[currMod++]);
+            else
+            {
+                std::cout << "min generations = 500" << std::endl;
+                gnrt = GENERATIONS_MAX;
+            }
         }
 
         // mutation chance
@@ -56,8 +73,11 @@ int main(int argc, char* argv[])
             }
         }
     }
-    else    // no mods, no benchmark, 
-        srand(time(NULL));
+    else    // no mods, no benchmark
+    {
+        srand(seed);
+        std::cout << "curr seed: " << seed << std::endl << std::endl;
+    }
 
 
     SDL_Window* window;
@@ -83,9 +103,16 @@ int main(int argc, char* argv[])
         init_random(points);
 
     // TRAINING
-    train(agents, points, saved, &gens, pop, gnrt, mut);
+    train(agents, points, saved, &gens, pop, gnrt, mut, false);
 
     const int lastSavedID = (gens-1)/(gnrt/500);
+
+    // SAVING INFO FOR GRAPH
+    saveInfo(saved, '0', gens);
+
+    pthread_t thr;
+
+    pthread_create(&thr, NULL, show_graph, NULL);
 
     // perceiving the improvement
     std::cout << "Generations: " << gens << std::endl;
@@ -192,6 +219,33 @@ int main(int argc, char* argv[])
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    pthread_join(thr, NULL);
 
     return 0;
+}
+
+
+void saveInfo(Point saved[500][AMOUNT_POINTS], char fileID, int gens)
+{
+    char filename[20] = "saved_trainingX.txt";
+    filename[14] = fileID;
+
+    std::ofstream f(filename);
+    int total_info = gens < 500? gens : 500;
+
+    int i;
+    int num = 0;
+    for(i=0; i<total_info; i++)
+    {
+        num = evaluation(saved[i]);
+        if(num != 0)
+            f << num << std::endl;
+    }
+}
+
+void* show_graph(void* arg)
+{
+    system("C:\\Users\\faelr\\AppData\\Local\\Programs\\Python\\Python314\\python .\\saved_graph.py");
+
+    return arg;
 }

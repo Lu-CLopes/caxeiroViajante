@@ -1,0 +1,1 @@
+C:\Users\faelr\AppData\Local\Programs\Python\Python314\python .\analysis.py

@@ -8,10 +8,10 @@
 
 // CONSTANTS
 const int AMOUNT_POINTS = 20;                            // 8 or more
-const int POPULATION = 48;                                  // amount of AI agents
-const int GENERATIONS_MAX = 100000;                          // max amount of generations
+const int POPULATION = 480;                                  // amount of AI agents
+const int GENERATIONS_MAX = 10000;                          // max amount of generations
 //const int STAGNATE_GENERATIONS_MAX = GENERATIONS_MAX/10;     // amount of sequential stagnate generations to stop the training
-const uint8_t CHANCE_OF_MUTATION = 30;                      // chance to mutate, in %
+const uint8_t CHANCE_OF_MUTATION = 5;                      // chance to mutate, in %
 const uint8_t CHAMPIONSHIP_SIZE = 3;                        // amount of participants in each championship
 //const int PARENTS_POPULATION = POPULATION/CHAMPIONSHIP_SIZE;
 
@@ -87,33 +87,16 @@ inline void selection(ai_agent population[], ai_agent winners[], int pop)
 inline void mutate(ai_agent *agent)
 {
     // chosen method: Swap Mutation
-    int i, j, k;
-    Point possibility1[AMOUNT_POINTS];
-    Point possibility2[AMOUNT_POINTS];
-    
-    for(i=0; i<AMOUNT_POINTS; i++)
-    {
-        possibility1[i] = agent->genes[i];
-        possibility2[i] = agent->genes[i];
-    }
+    int i,j;
 
-    // choose index from 0 to 7 randomly and swap with the next index
-    i = rand() % AMOUNT_POINTS;
+    // choose index from 0 to AMOUNT_POINTS-1 randomly and swap with the next index
+    i = rand() % (AMOUNT_POINTS-1); // 1-18
 
     // circular motion to get next index
     j = (i + 1) % AMOUNT_POINTS;
 
-    // circular motion to get next next index
-    k = (i + 2) % AMOUNT_POINTS;
-
     // swap adjacent points
-    std::swap(possibility1[i], possibility1[j]);
-    std::swap(possibility2[i], possibility2[k]);
-
-    if(evaluation(possibility1) < evaluation(possibility2))
-        std::swap(agent->genes[i], agent->genes[j]);
-    else
-        std::swap(agent->genes[i], agent->genes[k]);
+    std::swap(agent->genes[i], agent->genes[j]);
 }
 
 // checks arr[start] up to arr[end] for target
@@ -130,7 +113,7 @@ inline bool arrayContains(Point arr[], char target, int start, int end)
 }
 
 // how to cross the genes of the two parents to create a new child agent
-inline ai_agent crossing(ai_agent Mother, ai_agent Father, uint8_t mut)
+inline ai_agent crossing(ai_agent Mother, ai_agent Father, uint8_t mut, bool useInverter)
 {
     //  chosen method: Ordered Crossover
     int m, f;   // mother, father and used_points counter
@@ -146,13 +129,87 @@ inline ai_agent crossing(ai_agent Mother, ai_agent Father, uint8_t mut)
 
     m=4;
 
-    // the other elements are taken from the father in the order they show up
-    for(f=0; f<AMOUNT_POINTS || m<AMOUNT_POINTS; f++)
+    if(useInverter)
     {
-        Point temp = Father.genes[f];
+        // before using the father genes, we can see if the two parents go on the same direction
+        int i, j;
+        int m_init= 0, f_init = 0, r_init = 0;
 
-        if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2-1))
-            child.genes[m++] = temp;
+        // finding mother's initial gene on father's genes
+        for(i=0; i<AMOUNT_POINTS; i++)
+        {
+            if(Father.genes[i].name == Mother.genes[0].name)
+            {
+                f_init = i;
+                break;
+            }
+        }
+
+        // creating the reversed father
+        ai_agent rethaF = Father;
+        for(i=1; i<AMOUNT_POINTS/2; i++)
+            std::swap(rethaF.genes[i], rethaF.genes[AMOUNT_POINTS-i]);
+        r_init = AMOUNT_POINTS-1-f_init;
+
+        // evaluating best partner
+        int f_points = 0, r_points=0;
+
+        for(i=1; i<AMOUNT_POINTS; i++)
+        {
+            for(j=1; j<AMOUNT_POINTS; j++)
+            {
+                if(Mother.genes[(m_init+i)%AMOUNT_POINTS].name == Father.genes[(f_init+j)%AMOUNT_POINTS].name)
+                {
+                    f_points += j-i < 0? 0 : j-i;
+                    break;
+                }
+            }
+            
+            for(j=1; j<AMOUNT_POINTS; j++)
+            {
+                if(Mother.genes[(m_init+i)%AMOUNT_POINTS].name == rethaF.genes[(r_init+j)%AMOUNT_POINTS].name)
+                {
+                    f_points += j-i < 0? 0 : j-i;
+                    break;
+                }
+            }
+        }
+
+
+        if(r_points < f_points)
+        {
+            // the other elements are taken from the rethaf in the order they show up
+            for(f=0; m<AMOUNT_POINTS || f<AMOUNT_POINTS; f++)
+            {
+                Point temp = rethaF.genes[f];
+
+                if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2-1))
+                    child.genes[m++] = temp;
+            }
+        }
+        else
+        {
+            // the other elements are taken from the father in the order they show up
+            for(f=0; m<AMOUNT_POINTS || f<AMOUNT_POINTS; f++)
+            {
+                Point temp = Father.genes[f];
+
+                if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2-1))
+                    child.genes[m++] = temp;
+            }
+        }
+    
+    }
+    else
+    {
+        // the other elements are taken from the father in the order they show up
+        for(f=0; m<AMOUNT_POINTS || f<AMOUNT_POINTS; f++)
+        {
+            Point temp = Father.genes[f];
+
+            if(!arrayContains(child.genes, temp.name, 0, (int) AMOUNT_POINTS/2-1))
+                child.genes[m++] = temp;
+        }
     }
 
     // possibility of mutation
@@ -168,9 +225,10 @@ inline void shuffle(Point points[AMOUNT_POINTS])
 {
     int i;
 
-    for(i=0; i<AMOUNT_POINTS; i++)
+    for(i=1; i<AMOUNT_POINTS; i++)
     {
-        int temp = rand() % AMOUNT_POINTS;
+        int temp = 0;
+        temp = (rand() % (AMOUNT_POINTS-1))+1;  // 1-19
 
         if(temp != i)
             std::swap(points[i], points[temp]);
@@ -220,7 +278,7 @@ inline bool compGens(ai_agent curr[], ai_agent last[], int pop)
     return true;
 }
 
-inline void proliferation(ai_agent population[], ai_agent parents[], int pop, uint8_t mut)
+inline void proliferation(ai_agent population[], ai_agent parents[], int pop, uint8_t mut, bool useInverter)
 {
     int i, j;
 
@@ -228,8 +286,8 @@ inline void proliferation(ai_agent population[], ai_agent parents[], int pop, ui
     {
         for(j=0; j<2*CHAMPIONSHIP_SIZE; j+=2)
         {
-            population[3*i+j] =     crossing(parents[j], parents[j+1], mut);
-            population[3*i+j+1] =   crossing(parents[j+1], parents[j], mut);
+            population[3*i+j] =     crossing(parents[j], parents[j+1], mut, useInverter);
+            population[3*i+j+1] =   crossing(parents[j+1], parents[j], mut, useInverter);
         }
     }
 
@@ -270,7 +328,7 @@ inline void init_random(Point points[])
 }
 
 // TRAINING FUNCTION
-inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[500][AMOUNT_POINTS], int *gens, int pop, int gnrt, uint8_t mut)
+inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[500][AMOUNT_POINTS], int *gens, int pop, int gnrt, uint8_t mut, bool useInverter)
 {
     int i, stagCount = 0, savedCount = 0;
     bool notStagnate = true;
@@ -278,6 +336,7 @@ inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[50
     ai_agent currGen[pop];
     ai_agent currParents[pop/CHAMPIONSHIP_SIZE];
     double evalL = 0.0, evalC = 1.0;
+    int currMut = mut;
 
     // initial config
     for(i=0; i<pop; i++)
@@ -295,7 +354,10 @@ inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[50
 
         copyGen(lastGen, currGen, pop);
 
-        proliferation(currGen, currParents, pop, mut);
+        // DYNAMIC MUTATION CHANCE, avoids plateaus
+        if(stagCount>1)
+            currMut = mut + stagCount/2;
+        proliferation(currGen, currParents, pop, currMut, useInverter);
 
         // check if stagnate
         ai_agent trash = bestAgent(lastGen, &evalL, pop);
