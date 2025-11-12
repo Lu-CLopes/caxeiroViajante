@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 try:
-    file = open("saved_training0.txt", "r")  # Open for reading
+    file = open("bonus.txt", "r")  # Open for reading
     
 
     allInfo = file.readlines()
