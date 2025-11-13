@@ -2,16 +2,15 @@
 #define _VISUAL_H_
 
 
-#include "point.h"
+#include "genetic.h"
 
 
 // SCREEN
 #include <iostream>
 #include <SDL.h>
 const double centerX = 500.0;
-const double centerY = 375.0;
+const double centerY = 350.0;
 const int RADIUS = 7;
-const double PI = 3.14159265358979323846;
 
 
 inline int SDL_initialize(SDL_Window** window, SDL_Renderer** renderer)
@@ -24,7 +23,7 @@ inline int SDL_initialize(SDL_Window** window, SDL_Renderer** renderer)
     (*window) = SDL_CreateWindow("Screen Test",
                                      SDL_WINDOWPOS_UNDEFINED,
                                      SDL_WINDOWPOS_UNDEFINED,
-                                     1000, 750,
+                                     1000, 700,
                                      SDL_WINDOW_SHOWN);
     if (!window) {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
@@ -178,12 +177,22 @@ inline void fullCircle(SDL_Renderer* renderer, Point target)
     }
 }
 
-inline void drawCircle(SDL_Renderer* renderer, Point target)
+inline void drawPoints(SDL_Renderer* renderer, Point points[AMOUNT_POINTS], int n)
 {
-    if(target.flags & POINT_FULL)
-        fullCircle(renderer, target);
-    else
-        emptyCircle(renderer, target);
+    int i;
+
+    for(i=0; i<AMOUNT_POINTS; i++)
+    {
+        if(i<n)
+        {
+            fullCircle(renderer, points[i]);
+            line(renderer, points[i], i==AMOUNT_POINTS-1? points[0] : points[i+1], true);
+        }
+        else
+            emptyCircle(renderer, points[i]);
+    }
+
+    return;
 }
 
 #endif
