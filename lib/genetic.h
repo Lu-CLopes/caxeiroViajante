@@ -4,10 +4,11 @@
 
 #include "point.h"
 #include <cfloat>
+#include <iostream>      // for running the python graph
 
 
 // CONSTANTS
-const int AMOUNT_POINTS = 20;                            // 8 or more
+const int AMOUNT_POINTS = 12;                            // 8 or more
 const int POPULATION = 480;                                  // amount of AI agents
 const int GENERATIONS_MAX = 10000;                          // max amount of generations
 //const int STAGNATE_GENERATIONS_MAX = GENERATIONS_MAX/10;     // amount of sequential stagnate generations to stop the training
@@ -87,16 +88,24 @@ inline void selection(ai_agent population[], ai_agent winners[], int pop)
 inline void mutate(ai_agent *agent)
 {
     // chosen method: Swap Mutation
-    int i,j;
+    int i,j,k;
 
     // choose index from 0 to AMOUNT_POINTS-1 randomly and swap with the next index
-    i = rand() % (AMOUNT_POINTS-1); // 1-18
+    i = (rand() % (AMOUNT_POINTS-3))+1; // -3 because 0 can't be the target of swap
 
-    // circular motion to get next index
-    j = (i + 1) % AMOUNT_POINTS;
+    k = rand() % 5;
+
+    if(k>0)   // circular motion to get next index
+        j = (i + 1) % AMOUNT_POINTS;
+    else
+        j = (i + 2) % AMOUNT_POINTS;
 
     // swap adjacent points
+    //std::cout << agent->genes[i].name << " " << agent->genes[j].name << std::endl;
     std::swap(agent->genes[i], agent->genes[j]);
+    //std::cout << agent->genes[i].name << " " << agent->genes[j].name << std::endl;
+    //exit(0);
+    
 }
 
 // checks arr[start] up to arr[end] for target
@@ -330,11 +339,12 @@ inline void init_random(Point points[])
 // TRAINING FUNCTION
 inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[500][AMOUNT_POINTS], int *gens, int pop, int gnrt, uint8_t mut, bool useInverter)
 {
-    int i, stagCount = 0, savedCount = 0;
+    int i, j, k, stagCount = 0, savedCount = 0;
     bool notStagnate = true;
     ai_agent lastGen[pop];
     ai_agent currGen[pop];
-    ai_agent currParents[pop/CHAMPIONSHIP_SIZE];
+    const int PARENTS_AMOUNT = pop/CHAMPIONSHIP_SIZE;
+    ai_agent currParents[PARENTS_AMOUNT];
     double evalL = 0.0, evalC = 1.0;
     int currMut = mut;
 
@@ -352,12 +362,42 @@ inline void train(ai_agent agents[], Point points[AMOUNT_POINTS], Point saved[50
     {
         selection(currGen, currParents, pop);
 
+        // create array of distances
+        double distArray[PARENTS_AMOUNT];
+        for(j=0; j<PARENTS_AMOUNT; j++)
+            distArray[j] = evaluation(currParents[j].genes);
+
+        // sort the winners in descending order
+        for(j=0; j<PARENTS_AMOUNT; j++)
+        {
+            for(k=0; k<PARENTS_AMOUNT-j; k++)
+            {
+                if(distArray[k] > distArray[k+1])
+                {
+                    std::swap(distArray[k], distArray[k+1]);
+                    std::swap(currParents[k], currParents[k+1]);
+                }
+            }
+        }
+
+
+        // proliferation
+
         copyGen(lastGen, currGen, pop);
 
-        // DYNAMIC MUTATION CHANCE, avoids plateaus
+        // DYNAMIC MUTATION CHANCE, tries to prevent plateaus
         if(stagCount>1)
             currMut = mut + stagCount/2;
         proliferation(currGen, currParents, pop, currMut, useInverter);
+        
+        // ♥elitism♥
+        for(j=0; j<12; j++)
+        {
+            currGen[pop-(j*3)-1] = currParents[j];
+            currGen[pop-(j*3)-2] = currParents[j];
+            currGen[pop-(j*3)-3] = currParents[j];
+        }
+
 
         // check if stagnate
         ai_agent trash = bestAgent(lastGen, &evalL, pop);
